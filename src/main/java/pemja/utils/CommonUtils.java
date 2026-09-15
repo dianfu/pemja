@@ -22,7 +22,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
@@ -45,7 +44,7 @@ public class CommonUtils {
 
     public void loadPython(String pythonExec, String[] pythonPaths) {
         String pythonLibPath = getPythonLibrary(pythonExec, pythonPaths);
-        loadLibrary(pythonLibPath, "libpython");
+        loadLibrary(pythonLibPath);
         loadPythonLibrary(pythonExec, pythonPaths, "pemja_utils");
         // Because JVM can't load library globally, so we need to load CPython library globally.
         loadLibrary0(pythonLibPath);
@@ -87,19 +86,15 @@ public class CommonUtils {
                         pythonExec,
                         pythonPaths,
                         String.format("^%s\\.(cpython-.*\\.so|cp.*-win.*\\.pyd)$", packageName));
-        loadLibrary(packageLibPath, packageName);
+        loadLibrary(packageLibPath);
     }
 
-    private void loadLibrary(String libraryPath, String packageName) {
+    private void loadLibrary(String libraryPath) {
         try {
             System.load(libraryPath);
         } catch (UnsatisfiedLinkError error) {
             try {
-                Collection<String> loadedLibraryNames =
-                        NativeLibraryRegistry.getLoadedLibraryNames();
-                synchronized (loadedLibraryNames) {
-                    loadedLibraryNames.removeIf(element -> element.contains(packageName));
-                }
+                NativeLibraryRegistry.removeLoadedLibrary(libraryPath);
                 System.load(libraryPath);
             } catch (Throwable throwable) {
                 throw new RuntimeException(throwable);

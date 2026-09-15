@@ -16,9 +16,13 @@
 
 package pemja.utils;
 
+import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 /** Provides access to the JDK's registry of loaded native libraries. */
 final class NativeLibraryRegistry {
@@ -45,6 +49,25 @@ final class NativeLibraryRegistry {
         } catch (ReflectiveOperationException e) {
             throw new IllegalStateException("Failed to access loaded native library registry", e);
         }
+    }
+
+    static boolean removeLoadedLibrary(String libraryPath) {
+        Collection<String> loadedLibraryNames = getLoadedLibraryNames();
+        synchronized (loadedLibraryNames) {
+            return removeLoadedLibrary(loadedLibraryNames, libraryPath);
+        }
+    }
+
+    static boolean removeLoadedLibrary(Collection<String> loadedLibraryNames, String libraryPath) {
+        File libraryFile = new File(libraryPath);
+        Set<String> candidatePaths = new HashSet<>();
+        candidatePaths.add(libraryFile.getAbsolutePath());
+        try {
+            candidatePaths.add(libraryFile.getCanonicalPath());
+        } catch (IOException ignored) {
+            // The absolute path can still match the registry if canonicalization fails.
+        }
+        return loadedLibraryNames.removeIf(candidatePaths::contains);
     }
 
     private static Field findLoadedLibraryNamesField()
