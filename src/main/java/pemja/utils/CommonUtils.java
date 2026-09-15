@@ -22,11 +22,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.lang.reflect.Field;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
-import java.util.Vector;
 import java.util.regex.Pattern;
 
 /** A common util Class. */
@@ -92,25 +90,15 @@ public class CommonUtils {
         loadLibrary(packageLibPath, packageName);
     }
 
-    @SuppressWarnings("unchecked")
     private void loadLibrary(String libraryPath, String packageName) {
         try {
             System.load(libraryPath);
         } catch (UnsatisfiedLinkError error) {
             try {
-                Field field = ClassLoader.class.getDeclaredField("loadedLibraryNames");
-                field.setAccessible(true);
-                Object libsObject = field.get(null);
-                if (libsObject instanceof Vector) {
-                    Vector<String> libs = (Vector<String>) libsObject;
-                    synchronized (libsObject) {
-                        libs.removeIf(element -> element.contains(packageName));
-                    }
-                } else {
-                    Set<String> libs = (Set<String>) libsObject;
-                    synchronized (libsObject) {
-                        libs.removeIf(element -> element.contains(packageName));
-                    }
+                Collection<String> loadedLibraryNames =
+                        NativeLibraryRegistry.getLoadedLibraryNames();
+                synchronized (loadedLibraryNames) {
+                    loadedLibraryNames.removeIf(element -> element.contains(packageName));
                 }
                 System.load(libraryPath);
             } catch (Throwable throwable) {
